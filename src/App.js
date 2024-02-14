@@ -95,7 +95,7 @@ function App() {
           audio={false}
           ref={webcamRef}
           videoConstraints={{
-            facingMode: "user", // 'user' for front camera, 'environment' for back camera
+            facingMode: "environment", // 'user' for front camera, 'environment' for back camera
           }}
         />
       </div>
