@@ -11,30 +11,60 @@ const App = () => {
   const [selectedImage, setSelectedImage] = useState(null);
   const [flashOn, setFlashOn] = useState(false);
 
+  // const handleCapture = () => {
+  //   const canvas = document.createElement("canvas");
+  //   canvas.width = 1920; // Set the width to the desired resolution
+  //   canvas.height = 1080; // Set the height to the desired resolution
+
+  //   const ctx = canvas.getContext("2d");
+  //   const image = new Image();
+  //   image.src = webcamRef.current.getScreenshot();
+
+  //   image.onload = () => {
+  //     ctx.drawImage(image, 0, 0, canvas.width, canvas.height);
+  //     const svgImage = canvas.toDataURL("image/svg+xml");
+
+  //     const imageSize = getImageSizeInMB(svgImage);
+
+  //     if (imageSize <= 2) {
+  //       setCapturedImages([
+  //         ...capturedImages,
+  //         { src: svgImage, timestamp: new Date(), size: imageSize },
+  //       ]);
+  //     } else {
+  //       alert("Image size exceeds 2 MB. Please capture a smaller image.");
+  //     }
+  //   };
+  // };
+
   const handleCapture = () => {
     const canvas = document.createElement("canvas");
-    canvas.width = 1920; // Set the width to the desired resolution
-    canvas.height = 1080; // Set the height to the desired resolution
+    const video = webcamRef.current.video;
+
+    if (!video) {
+      alert("Unable to capture image. Webcam not initialized.");
+      return;
+    }
+
+    const { videoWidth, videoHeight } = video;
+    canvas.width = videoWidth;
+    canvas.height = videoHeight;
 
     const ctx = canvas.getContext("2d");
-    const image = new Image();
-    image.src = webcamRef.current.getScreenshot();
+    ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
 
-    image.onload = () => {
-      ctx.drawImage(image, 0, 0, canvas.width, canvas.height);
-      const svgImage = canvas.toDataURL("image/svg+xml");
+    const capturedImage = canvas.toDataURL("image/svg+xml");
 
-      const imageSize = getImageSizeInMB(svgImage);
+    const imageSize = getImageSizeInMB(capturedImage);
 
-      if (imageSize <= 2) {
-        setCapturedImages([
-          ...capturedImages,
-          { src: svgImage, timestamp: new Date(), size: imageSize },
-        ]);
-      } else {
-        alert("Image size exceeds 2 MB. Please capture a smaller image.");
-      }
-    };
+    if (imageSize <= 2) {
+      setCapturedImages([
+        ...capturedImages,
+        { src: capturedImage, timestamp: new Date(), size: imageSize },
+      ]);
+    } else {
+      alert("Image size exceeds 2 MB. Please capture a smaller image.");
+    }
   };
 
   console.log(capturedImages);
