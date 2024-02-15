@@ -1,128 +1,158 @@
-import React, { useState, useRef, useEffect } from "react";
+import moment from "moment";
+import React, { useRef, useState } from "react";
+import { AiOutlineCamera } from "react-icons/ai";
+import { MdDeleteForever } from "react-icons/md";
 import Webcam from "react-webcam";
-import "./App.css";
 
-function App() {
+const App = () => {
   const webcamRef = useRef(null);
   const [capturedImages, setCapturedImages] = useState([]);
+  const [showCamera, setShowCamera] = useState(false);
+  const [selectedImage, setSelectedImage] = useState(null);
   const [flashOn, setFlashOn] = useState(false);
 
-  const captureImage = () => {
-    const imageSrc = webcamRef.current.getScreenshot();
-    if (imageSrc) {
-      // Convert image to SVG format
-      const imgElement = new Image();
-      imgElement.src = imageSrc;
-      imgElement.onload = () => {
-        const canvas = document.createElement("canvas");
-        const ctx = canvas.getContext("2d");
-        canvas.width = imgElement.width;
-        canvas.height = imgElement.height;
-        ctx.drawImage(imgElement, 0, 0, imgElement.width, imgElement.height);
+  const handleCapture = () => {
+    const canvas = document.createElement("canvas");
+    canvas.width = 1920; // Set the width to the desired resolution
+    canvas.height = 1080; // Set the height to the desired resolution
 
-        const svgImage = `<svg xmlns="http://www.w3.org/2000/svg" width="${
-          imgElement.width
-        }" height="${
-          imgElement.height
-        }"><image href="${canvas.toDataURL()}" width="${
-          imgElement.width
-        }" height="${imgElement.height}" /></svg>`;
+    const ctx = canvas.getContext("2d");
+    const image = new Image();
+    image.src = webcamRef.current.getScreenshot();
 
-        setCapturedImages([...capturedImages, svgImage]);
-      };
-    }
+    image.onload = () => {
+      ctx.drawImage(image, 0, 0, canvas.width, canvas.height);
+      const svgImage = canvas.toDataURL("image/svg+xml");
+
+      const imageSize = getImageSizeInMB(svgImage);
+
+      if (imageSize <= 2) {
+        setCapturedImages([
+          ...capturedImages,
+          { src: svgImage, timestamp: new Date(), size: imageSize },
+        ]);
+      } else {
+        alert("Image size exceeds 2 MB. Please capture a smaller image.");
+      }
+    };
+  };
+
+  console.log(capturedImages);
+
+  const getImageSizeInMB = (dataUrl) => {
+    const byteString = atob(dataUrl.split(",")[1]);
+    const byteStringLength = byteString.length;
+    const fileSizeInBytes = byteStringLength + 1024;
+    const fileSizeInMB = fileSizeInBytes / (1024 * 1024);
+    return fileSizeInMB.toFixed(2);
+  };
+
+  const cancelCamera = () => {
+    setShowCamera(false);
+  };
+
+  const handleDelete = (index) => {
+    const updatedImages = [...capturedImages];
+    updatedImages.splice(index, 1);
+    setCapturedImages(updatedImages);
+  };
+
+  const handleThumbnailClick = (index) => {
+    setSelectedImage(capturedImages[index].src);
+  };
+
+  const handleCloseModal = () => {
+    setSelectedImage(null);
   };
 
   const toggleFlash = () => {
     setFlashOn(!flashOn);
-    // Implement torch functionality here for mobile devices
-    if (
-      navigator.mediaDevices &&
-      navigator.mediaDevices.getSupportedConstraints().torch
-    ) {
-      const track = webcamRef.current.video.srcObject.getTracks()[0];
-      const capabilities = track.getCapabilities();
-      if (capabilities.torch) {
-        track.applyConstraints({
-          advanced: [{ torch: flashOn }],
-        });
-      }
-    }
-  };
-
-  const switchCamera = () => {
-    // Switch to back camera if it's a mobile device
-    if (
-      /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(
-        navigator.userAgent
-      )
-    ) {
-      const userFacing = webcamRef.current.videoConstraints.facingMode;
-      const newFacingMode = userFacing === "user" ? "environment" : "user";
-      webcamRef.current.videoConstraints.facingMode = newFacingMode;
-    }
-  };
-
-  const cancelCamera = () => {
-    // Close the camera
-    const tracks = webcamRef.current.video.srcObject.getTracks();
-    tracks.forEach((track) => track.stop());
-    webcamRef.current.video.srcObject = null;
-  };
-
-  useEffect(() => {
-    // Switch to back camera on mobile devices
-    switchCamera();
-  }, []); // Run only on mount
-
-  const deleteImage = (index) => {
-    const newImages = [...capturedImages];
-    newImages.splice(index, 1);
-    setCapturedImages(newImages);
   };
 
   return (
-    <div className="App">
-      <div>
-        <button onClick={captureImage}>Capture</button>
-        <button onClick={toggleFlash}>
-          {flashOn ? "Flash Off" : "Flash On"}
-        </button>
-        <button onClick={cancelCamera}>Cancel</button>
+    <>
+      <div
+        className=" headClass algin-item "
+        onClick={() => setShowCamera(true)}
+      >
+        Camera <AiOutlineCamera className="cameraImage" />{" "}
       </div>
-      <div>
-        <Webcam
-          audio={false}
-          ref={webcamRef}
-          videoConstraints={{
-            facingMode: "environment", // 'user' for front camera, 'environment' for back camera
-          }}
-        />
-      </div>
-      <div>
-        <table>
-          <thead>
-            <tr>
-              <th>Image</th>
-              <th>Action</th>
-            </tr>
-          </thead>
-          <tbody>
-            {capturedImages.map((image, index) => (
-              <tr key={index}>
-                <td>
-                  <div dangerouslySetInnerHTML={{ __html: image }} />
-                </td>
-                <td>
-                  <button onClick={() => deleteImage(index)}>Delete</button>
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      </div>
-    </div>
+      {showCamera && (
+        <>
+          <Webcam
+            audio={false}
+            ref={webcamRef}
+            screenshotFormat="image/jpeg"
+            width={270} // Set the width of the camera
+            height={270} // Set the height of the camera
+            videoConstraints={{
+              facingMode: "environment",
+              deviceId: undefined,
+              torch: flashOn,
+            }}
+          />
+          <div className="d-flex gap-2 mt-2 mb-2 justify-content-center align-items-center">
+            <button
+              variant="success"
+              className="btn btnSize mr-2"
+              onClick={handleCapture}
+            >
+              Capture
+            </button>
+            <button
+              variant={flashOn ? "danger" : "warning"}
+              onClick={toggleFlash}
+              className="btn btnSize ml-2"
+            >
+              {flashOn ? "Flash off" : "Flash on"}
+            </button>
+            <button
+              variant="danger"
+              className="btn btnSize ml-2"
+              onClick={cancelCamera}
+            >
+              Cancel
+            </button>
+          </div>
+        </>
+      )}
+      {capturedImages.length > 0 && (
+        <div style={{ display: "flex", flexWrap: "wrap" }}>
+          {capturedImages.map((image, index) => (
+            <div key={index} style={{ width: "270px", margin: "10px" }}>
+              <img
+                className="thumbnail-image" // Add a class for styling
+                src={image.src}
+                alt={`Captured ${index}`}
+                onClick={() => handleThumbnailClick(index)}
+              />
+              <div>
+                <div className="d-flex justify-content-between align-items-center">
+                  <span
+                    style={{ fontSize: "12px", fontWeight: "600" }}
+                  >{`Size: ${image.size} MB, `}</span>
+                  <span style={{ fontSize: "12px", fontWeight: "600" }}>
+                    {moment(image.timestamp).format("DD-MMM-YYYY HH:mm")}
+                  </span>
+                  <MdDeleteForever
+                    style={{ color: "red" }}
+                    size={20}
+                    onClick={() => handleDelete(index)}
+                  />
+                </div>
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+
+      {/* <Modal show={selectedImage !== null} onHide={handleCloseModal}>
+        <Modal.Body>
+          <Image src={selectedImage} alt="Selected" fluid />
+        </Modal.Body>
+      </Modal> */}
+    </>
   );
-}
+};
 
 export default App;
