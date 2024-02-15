@@ -97,6 +97,21 @@ const App = () => {
 
   const toggleFlash = () => {
     setFlashOn(!flashOn);
+
+    // Access the webcam's video element and toggle the flash
+    const videoElement = webcamRef.current.video;
+    if (videoElement) {
+      const tracks = videoElement.getVideoTracks();
+      if (tracks && tracks.length > 0) {
+        const [track] = tracks;
+        const capabilities = track.getCapabilities();
+        if (capabilities && "torch" in capabilities) {
+          track.applyConstraints({
+            advanced: [{ torch: flashOn }],
+          });
+        }
+      }
+    }
   };
 
   return (
